@@ -1,0 +1,156 @@
+:root {
+  color-scheme: light dark;
+  --line: light-dark(#e2e2e5, #33343a);
+  --muted: light-dark(#6b6b74, #9a9aa4);
+  --accent: light-dark(#b4451f, #ff9a70);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  line-height: 1.55;
+}
+
+body {
+  margin: 0;
+  padding: 0 1.5rem 4rem;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.bar h1 {
+  font-size: 1rem;
+  margin: 0;
+  font-weight: 600;
+}
+
+nav {
+  display: flex;
+  gap: 0.75rem;
+}
+
+nav a {
+  color: inherit;
+  text-decoration: none;
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.35rem;
+}
+
+nav a.router-link-active {
+  background: color-mix(in oklab, currentColor 10%, transparent);
+}
+
+.badge {
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.1rem 0.6rem;
+}
+
+.badge.dirty {
+  color: var(--accent);
+  border-color: currentColor;
+}
+
+main {
+  max-width: 46rem;
+}
+
+h2 {
+  font-size: 1.05rem;
+}
+
+p {
+  color: var(--muted);
+  max-width: 42rem;
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.75rem 0;
+}
+
+.field span {
+  min-width: 9rem;
+  font-size: 0.9rem;
+}
+
+.field em {
+  font-size: 0.8rem;
+  color: var(--accent);
+  font-style: normal;
+}
+
+input {
+  font: inherit;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 0.4rem;
+  background: transparent;
+  color: inherit;
+  min-width: 16rem;
+}
+
+button {
+  font: inherit;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.4rem;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+button.danger {
+  color: var(--accent);
+  border-color: currentColor;
+}
+
+/* Nested hosts are nested boxes, so the scope tree is visible on the page. */
+.overlay {
+  margin: 1rem 0 1rem 1.25rem;
+  padding: 0.75rem 1rem 1rem;
+  border: 1px solid var(--line);
+  border-left-width: 3px;
+  border-radius: 0.5rem;
+}
+
+.overlay > header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+dialog {
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+  padding: 1.25rem;
+  background: light-dark(#fff, #1c1d21);
+  color: inherit;
+}
+
+dialog::backdrop {
+  background: rgb(0 0 0 / 0.35);
+}
+
+.row {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+footer {
+  margin-top: 3rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.85rem;
+}

@@ -1,0 +1,170 @@
+# vue-leave-guards
+
+[![CI](https://github.com/fabkho/vue-leave-guards/actions/workflows/ci.yml/badge.svg)](https://github.com/fabkho/vue-leave-guards/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/vue-leave-guards.svg)](https://www.npmjs.com/package/vue-leave-guards)
+[![license](https://img.shields.io/npm/l/vue-leave-guards.svg)](./LICENSE)
+
+Register an unsaved-changes guard anywhere in a Vue app and it is asked before
+the user leaves — however deeply it is nested, and whatever "leave" means at
+that depth.
+
+**[Try it →](https://fabkho.github.io/vue-leave-guards/)**
+
+## Install
+
+```bash
+npm i vue-leave-guards
+```
+
+```ts
+// main.ts
+import { createLeaveGuards } from 'vue-leave-guards/router'
+
+app.use(router).use(createLeaveGuards({ router }))
+```
+
+```vue
+<script setup lang="ts">
+import { ref } from 'vue'
+import { useLeaveGuard } from 'vue-leave-guards'
+
+const draft = ref('')
+
+useLeaveGuard({
+  isDirty: () => draft.value !== '',
+  confirm: () => draft.value === '' || myConfirmDialog(),
+})
+</script>
+```
+
+That is the whole contract. The component does not know whether it sits on a
+route, in a modal, or three overlays deep.
+
+## Scopes nest
+
+`onBeforeRouteLeave` only fires for components a route names, so a dirty form
+inside a modal inside a drawer is invisible to it. Here, any host that can
+dismiss itself opens a scope:
+
+```vue
+<script setup lang="ts">
+import { provideLeaveGuards } from 'vue-leave-guards'
+
+const { confirmLeave, dirty } = provideLeaveGuards()
+
+async function close() {
+  if (!(await confirmLeave())) return
+  emit('close')
+}
+</script>
+```
+
+- Guards inside reach the **nearest** scope, by injection.
+- Each scope registers with its parent as **one composite guard**, so a tree of
+  any depth collapses into a single entry at the root.
+- Closing a modal asks only that modal's subtree. Navigating asks everything.
+- The app ends up with **one route guard and one `beforeunload` listener**,
+  regardless of how many forms are mounted.
+
+That last point is not a micro-optimisation: `window.onbeforeunload` is a
+singleton, so per-form listeners overwrite each other and null each other out on
+unmount.
+
+## Prompts never stack
+
+Guards are asked **sequentially, bailing at the first refusal**, so two dirty
+forms produce one dialog rather than two. `confirm` may return a promise, so the
+dialog can be yours rather than the browser's.
+
+`isDirty` is separate, and synchronous, because `beforeunload` cannot await a
+dialog — browsers only accept a synchronous `preventDefault()`, and ignore any
+message you pass. It is also what `dirty` reads, so a header can show an unsaved
+marker for everything below it.
+
+## Narrowing a guard
+
+`shouldGuard` decides which navigations a guard cares about. It is consulted
+only for navigations; a host closing itself asks everything.
+
+```ts
+useLeaveGuard<RouteLocationNormalized>({
+  confirm: askTheUser,
+  shouldGuard: (to, from) => to.name !== from.name,
+})
+```
+
+## Without a router
+
+The core imports nothing but `vue`. Skip the plugin and own the scope yourself:
+
+```ts
+import { createReactiveLeaveGuardScope, leaveGuardsKey } from 'vue-leave-guards'
+
+const scope = createReactiveLeaveGuardScope()
+app.provide(leaveGuardsKey, scope.registry)
+```
+
+`createLeaveGuards({ beforeUnload: true })` with no `router` is the same thing
+with the unload listener already wired.
+
+## API
+
+### `vue-leave-guards`
+
+| Export | Description |
+| --- | --- |
+| `useLeaveGuard(guard)` | Registers a guard with the nearest scope, for as long as the calling scope lives. A bare function guards every navigation and reports nothing to `beforeunload`. Returns `{ unregister, registered }`. |
+| `provideLeaveGuards()` | Opens a scope at this component and returns it. Registers with the enclosing scope, if any. |
+| `createReactiveLeaveGuardScope()` | A scope with no component attached, for a plugin or a store. |
+| `createLeaveGuardScope(options?)` | The same, without Vue reactivity — no framework import at all. |
+| `leaveGuardsKey` | The injection key, for providing a registry by hand. |
+
+### `LeaveGuardEntry`
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `confirm` | `(ctx?) => boolean \| Promise<boolean>` | **Required.** `false` aborts the leave. |
+| `isDirty` | `() => boolean` | Synchronous. Feeds `beforeunload` and `dirty`. Absent means never dirty. |
+| `shouldGuard` | `(to, from) => boolean` | Absent means every navigation. |
+
+### Scope
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `confirmLeave(ctx?)` | `Promise<boolean>` | Asks the subtree. Without a context, asks everything. |
+| `dirty` | `ComputedRef<boolean>` | True while anything below reports unsaved changes. |
+| `size` | `ComputedRef<number>` | Live entry count; a nested scope counts as one. |
+| `isDirty()` | `boolean` | The non-reactive read, for guards whose state Vue cannot see. |
+| `registry` | `LeaveGuardRegistry` | What gets provided to descendants. |
+| `composite` | `LeaveGuardEntry` | This scope as one entry, for a parent. |
+
+### `vue-leave-guards/router`
+
+`createLeaveGuards(options?)` returns a Vue plugin carrying its root `scope`.
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `router` | — | Guards navigation. Omit to guard only `beforeunload`. |
+| `beforeUnload` | `true` | Warns before reload and tab close while anything is dirty. |
+| `window` | `globalThis.window` | For iframes, tests and SSR. |
+
+Also exported: `RouteLeaveGuard`, `RouteLeaveGuardEntry`, `RouteLeaveGuardScope`,
+`RouteNavigationContext` — the core types with vue-router's route filled in.
+
+## Notes
+
+- `vue-router` is an **optional** peer. The core never imports it, not even for
+  a type.
+- `useLeaveGuard` **warns** rather than throwing when it finds no scope. A guard
+  that silently no-ops is how an unguarded form ships.
+- `dirty` tracks guards mounting and unmounting, and the reactive state each one
+  reads. A guard reading something Vue cannot see needs `isDirty()`.
+- ESM only.
+
+## Contributing
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md).
+
+## Licence
+
+MIT

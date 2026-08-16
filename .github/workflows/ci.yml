@@ -44,14 +44,16 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      # Before the playground build, which drives the built page in a real
+      # browser rather than trusting that it rendered.
+      - name: Install browser
+        run: pnpm exec playwright install --with-deps chromium
+
       - name: Build playground
         run: pnpm build:playground
 
       - name: Test (unit)
         run: pnpm test
-
-      - name: Install browser
-        run: pnpm exec playwright install --with-deps chromium
 
       - name: Test (browser)
         run: pnpm test:browser

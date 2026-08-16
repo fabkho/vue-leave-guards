@@ -29,6 +29,11 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # `build:playground` verifies the built page by driving it, so the deploy
+      # needs a browser too — the check is worth more here than anywhere.
+      - name: Install browser
+        run: pnpm exec playwright install --with-deps chromium
+
       - name: Build the playground
         run: pnpm build:playground
         env:

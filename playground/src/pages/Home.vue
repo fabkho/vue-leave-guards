@@ -1,38 +1,140 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { inject, ref } from 'vue'
 import DirtyForm from '../DirtyForm.vue'
 import Overlay from '../Overlay.vue'
+import { rootScopeKey } from '../rootScope'
+
+const root = inject(rootScopeKey)
 
 const drawer = ref(false)
 const modal = ref(false)
 </script>
 
 <template>
-  <section>
-    <h2>A page</h2>
-    <p>
-      Every field below registers one guard. Make any of them dirty, then try to
-      navigate, close its host, or reload the tab.
-    </p>
+  <main class="cases">
+    <!-- Nesting first and on its own. It is the reason to use this over a route
+         guard, and it has to be opened to be understood. -->
+    <section class="card card--wide showcase">
+      <h2>Three levels deep</h2>
+      <p>
+        Type in any field, then try to leave — navigate, close a host, or reload
+        the tab. Each host below opens its own scope, and each field registers
+        one guard with the nearest one.
+      </p>
 
-    <DirtyForm label="Page field" />
+      <div class="showcase__stage">
+        <DirtyForm label="On the page" />
 
-    <button type="button" @click="drawer = true">
-      Open drawer
-    </button>
+        <button
+          v-if="!drawer"
+          type="button"
+          class="plain"
+          @click="drawer = true"
+        >
+          Open a drawer
+        </button>
 
-    <!-- The awkward case: three levels of host, each with its own scope and its
-         own dirty field, all reachable from the one root route guard. -->
-    <Overlay v-if="drawer" title="Drawer" @close="drawer = false">
-      <DirtyForm label="Drawer field" />
+        <Overlay v-else title="Drawer" @close="drawer = false">
+          <DirtyForm label="In the drawer" />
 
-      <button type="button" @click="modal = true">
-        Open modal
-      </button>
+          <button
+            v-if="!modal"
+            type="button"
+            class="plain"
+            @click="modal = true"
+          >
+            Open a modal
+          </button>
 
-      <Overlay v-if="modal" title="Modal" @close="modal = false">
-        <DirtyForm label="Modal field" />
-      </Overlay>
-    </Overlay>
-  </section>
+          <Overlay v-else title="Modal" @close="modal = false">
+            <DirtyForm label="In the modal" />
+          </Overlay>
+        </Overlay>
+      </div>
+
+      <p class="showcase__claim">
+        The root scope holds
+        <span class="badge" :class="{ 'is-dirty': root?.dirty.value }">
+          {{ root?.size.value ?? 0 }} entr{{ root?.size.value === 1 ? 'y' : 'ies' }}
+        </span>
+        — and opening both hosts adds exactly one, with the modal and every field
+        inside them folded into it. That is why the app needs one route guard and
+        one <code>beforeunload</code> rather than one per form.
+      </p>
+    </section>
+
+    <div class="demos">
+      <section class="card">
+        <h2>One prompt, not three</h2>
+        <p>
+          Two guards in the same scope. Make both unsaved and leave: they are
+          asked in turn and stop at the first refusal, so the dialogs never
+          stack up on top of each other.
+        </p>
+        <DirtyForm label="Title" />
+        <DirtyForm label="Description" />
+      </section>
+
+      <section class="card">
+        <h2>Your dialog, not the browser's</h2>
+        <p>
+          <code>confirm</code> may return a promise, so the prompt is whatever
+          you already ship. Every dialog on this page is a real
+          <code>&lt;dialog&gt;</code> element.
+        </p>
+        <DirtyForm label="Notes" />
+      </section>
+    </div>
+  </main>
 </template>
+
+<style scoped>
+.card.showcase {
+  padding: 2.5rem 1.5rem 2rem;
+}
+
+.showcase h2 {
+  font-size: 1.25rem;
+}
+
+/* Room for the drawer — the first thing a visitor opens — so that click does not
+   push the rest of the page around. Reserving for the modal as well would leave
+   a void half the card tall before anything has been touched, which reads as a
+   broken layout rather than as considerate. */
+.showcase__stage {
+  display: grid;
+  justify-items: start;
+  align-content: start;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 9rem;
+}
+
+.showcase__claim {
+  margin: 0.5rem 0 0;
+}
+
+/**
+ * The two demos share a grid of their own so they can share a height — one
+ * carries two fields and the other one, and a row of cards that steps up and
+ * down with its contents reads as broken rather than as varied.
+ *
+ * `grid-auto-rows: 1fr` is why they match; it cannot go on the outer grid,
+ * where it would stretch the full-width showcase to the same height as well.
+ */
+/* `auto-fit`, not `auto-fill`: with two cards in a grid three tracks wide,
+   `auto-fill` keeps the empty third and leaves a hole in the row. */
+.demos {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  grid-auto-rows: 1fr;
+  gap: 1.25rem;
+}
+
+/* Three lines reserved for every description, so the fields start at the same
+   height in both cards. */
+.demos .card p {
+  min-height: 4.5em;
+}
+</style>

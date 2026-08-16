@@ -3,13 +3,17 @@ import DirtyForm from '../DirtyForm.vue'
 </script>
 
 <template>
-  <section>
-    <h2>Another page</h2>
-    <p>
-      This field guards navigation back to the first page only, via
-      <code>shouldGuard</code>, and reports nothing to <code>beforeunload</code>
-      — so reloading the tab loses it without a word.
-    </p>
-    <DirtyForm label="Route-scoped field" only="/" :unload="false" />
-  </section>
+  <main class="cases">
+    <section class="card card--wide">
+      <h2>Narrowed to the navigations it cares about</h2>
+      <p>
+        <code>shouldGuard</code> decides which navigations reach a guard. This
+        one asks on the way back to the first page and stays quiet going
+        anywhere else. It also reports nothing to <code>beforeunload</code>, so
+        reloading the tab discards it without a word — which is the right
+        behaviour for a draft the server already has.
+      </p>
+      <DirtyForm label="Filter" only="/" :unload="false" />
+    </section>
+  </main>
 </template>

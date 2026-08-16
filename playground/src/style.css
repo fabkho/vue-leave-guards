@@ -1,156 +1,184 @@
+/**
+ * Light only. The page is a shop window, and the frosted sheets are drawn for a
+ * pale ground — following the visitor's system into dark mode would put a light
+ * page under dark chrome and misrepresent both.
+ */
 :root {
-  color-scheme: light dark;
-  --line: light-dark(#e2e2e5, #33343a);
-  --muted: light-dark(#6b6b74, #9a9aa4);
-  --accent: light-dark(#b4451f, #ff9a70);
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  line-height: 1.55;
+  color-scheme: light;
+  font-family: -apple-system, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
+  line-height: 1.5;
+  color: #1c2b36;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
 body {
+  min-height: 100vh;
   margin: 0;
-  padding: 0 1.5rem 4rem;
+  padding: 4rem 2rem 6rem;
+  background: #eef2f4;
 }
 
-.bar {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  flex-wrap: wrap;
-  padding: 1rem 0;
-  border-bottom: 1px solid var(--line);
+/* The ground sits on its own fixed layer so it stays put while the page scrolls
+   and the frosted cards have something to blur. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  /* A white scrim over the ground. Undiluted, its dark end lands under whichever
+     cards happen to scroll into it and takes the body text with it; at this
+     strength the gradient still reads as a tint and everything stays legible
+     wherever it stops. */
+  background-image:
+    linear-gradient(rgb(255 255 255 / 62%), rgb(255 255 255 / 62%)),
+    url("/ground.jpg");
+  background-size: cover;
+  background-position: center;
 }
 
-.bar h1 {
+/* The page furniture is shared across the routed pages, so it cannot live in a
+   scoped block the way a single-file playground's would. */
+
+.cases {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
+  align-items: start;
+  gap: 1.25rem;
+  max-width: 72rem;
+  margin: 0 auto;
+}
+
+.card--wide {
+  grid-column: 1 / -1;
+}
+
+/**
+ * Frosted: a pale sheet over the ground rather than an opaque card on it, so
+ * the gradient stays visible through the page.
+ */
+.card {
+  display: grid;
+  justify-items: start;
+  /* Rows keep their natural size and the slack collects at the bottom. Grid
+     stretches auto rows by default, which spreads the spare height of an
+     equal-height card between its rows and moves the contents. */
+  align-content: start;
+  gap: 0.5rem;
+  padding: 1.5rem;
+  border-radius: 1.25rem;
+  background: rgb(255 255 255 / 42%);
+  backdrop-filter: blur(30px) saturate(140%);
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 55%),
+    0 18px 40px rgb(20 40 55 / 8%);
+}
+
+.card h2 {
+  margin: 0;
   font-size: 1rem;
-  margin: 0;
   font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
-nav {
-  display: flex;
-  gap: 0.75rem;
-}
-
-nav a {
-  color: inherit;
-  text-decoration: none;
-  padding: 0.2rem 0.5rem;
-  border-radius: 0.35rem;
-}
-
-nav a.router-link-active {
-  background: color-mix(in oklab, currentColor 10%, transparent);
-}
-
-.badge {
-  margin-left: auto;
-  font-size: 0.8rem;
-  color: var(--muted);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 0.1rem 0.6rem;
-}
-
-.badge.dirty {
-  color: var(--accent);
-  border-color: currentColor;
-}
-
-main {
-  max-width: 46rem;
-}
-
-h2 {
-  font-size: 1.05rem;
-}
-
-p {
-  color: var(--muted);
+.card p {
+  margin: 0 0 0.75rem;
   max-width: 42rem;
+  color: #4a5560;
+  font-size: 0.8125rem;
+  line-height: 1.5;
 }
 
-.field {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  margin: 0.75rem 0;
+code {
+  padding: 0.0625rem 0.3125rem;
+  border-radius: 0.25rem;
+  background: rgb(255 255 255 / 55%);
+  color: #33404b;
+  font-size: 0.8125em;
+  font-family: ui-monospace, monospace;
 }
 
-.field span {
-  min-width: 9rem;
-  font-size: 0.9rem;
+a {
+  color: #2b6af8;
 }
 
-.field em {
-  font-size: 0.8rem;
-  color: var(--accent);
-  font-style: normal;
-}
-
-input {
+/* Buttons, and the pills the nav is made of. */
+.plain {
+  padding: 0.4375rem 0.875rem;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 70%);
+  box-shadow: inset 0 0 0 1px rgb(20 40 55 / 10%);
+  color: #33404b;
   font: inherit;
-  padding: 0.35rem 0.55rem;
-  border: 1px solid var(--line);
-  border-radius: 0.4rem;
-  background: transparent;
-  color: inherit;
-  min-width: 16rem;
-}
-
-button {
-  font: inherit;
-  padding: 0.35rem 0.75rem;
-  border: 1px solid var(--line);
-  border-radius: 0.4rem;
-  background: transparent;
-  color: inherit;
+  font-size: 0.8125rem;
+  text-decoration: none;
   cursor: pointer;
 }
 
-button.danger {
-  color: var(--accent);
-  border-color: currentColor;
+.plain:hover {
+  background: rgb(255 255 255 / 90%);
 }
 
-/* Nested hosts are nested boxes, so the scope tree is visible on the page. */
-.overlay {
-  margin: 1rem 0 1rem 1.25rem;
-  padding: 0.75rem 1rem 1rem;
-  border: 1px solid var(--line);
-  border-left-width: 3px;
-  border-radius: 0.5rem;
+/* The count a scope currently holds. Quiet until something is unsaved, which is
+   the only state worth a colour. */
+.badge {
+  padding: 0.0625rem 0.5rem;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 55%);
+  box-shadow: inset 0 0 0 1px rgb(20 40 55 / 8%);
+  color: #6a7682;
+  font-size: 0.75rem;
+  white-space: nowrap;
 }
 
-.overlay > header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.25rem;
+.badge.is-dirty {
+  background: rgb(255 244 214 / 80%);
+  box-shadow: inset 0 0 0 1px rgb(180 120 20 / 22%);
+  color: #8a5a08;
 }
 
+/* A dialog per guard, so the sequencing is visible rather than described. */
 dialog {
-  border: 1px solid var(--line);
-  border-radius: 0.6rem;
-  padding: 1.25rem;
-  background: light-dark(#fff, #1c1d21);
-  color: inherit;
+  max-width: 24rem;
+  padding: 1.5rem;
+  border: 0;
+  border-radius: 1rem;
+  background: rgb(255 255 255 / 92%);
+  backdrop-filter: blur(30px) saturate(140%);
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 60%),
+    0 24px 60px rgb(20 40 55 / 18%);
+  color: #1c2b36;
 }
 
 dialog::backdrop {
-  background: rgb(0 0 0 / 0.35);
+  background: rgb(20 40 55 / 25%);
+  backdrop-filter: blur(2px);
 }
 
-.row {
+dialog p {
+  margin: 0;
+  font-size: 0.9375rem;
+}
+
+dialog .row {
   display: flex;
   gap: 0.5rem;
   justify-content: flex-end;
-  margin-top: 1rem;
+  margin-top: 1.25rem;
 }
 
-footer {
-  margin-top: 3rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--line);
-  font-size: 0.85rem;
+.plain--danger {
+  background: rgb(230 71 89 / 90%);
+  box-shadow: inset 0 0 0 1px rgb(190 40 60 / 30%);
+  color: #fff;
+}
+
+.plain--danger:hover {
+  background: rgb(230 71 89 / 100%);
 }

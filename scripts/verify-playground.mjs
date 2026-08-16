@@ -50,19 +50,35 @@ const page = await browser.newPage()
 const problems = []
 page.on('pageerror', error => problems.push(`page error: ${error.message}`))
 
+/* The frosted cards are drawn for the ground behind them, and a `base` the
+   stylesheet did not get rewritten for loses it with no other symptom: the page
+   still renders, just flat on grey. */
+page.on('response', (response) => {
+  if (response.status() >= 400) {
+    problems.push(`${response.status()} on ${new URL(response.url()).pathname}`)
+  }
+})
+
+// Long enough for a slow CI runner, short enough that a page which never booted
+// reports in seconds rather than after a default half-minute stall per step.
+page.setDefaultTimeout(10_000)
+
 try {
   await page.goto(`${origin}${base}#/`, { waitUntil: 'networkidle' })
 
+  // Bail before interacting: if an asset 404'd the app never mounted, and every
+  // step after this would fail as an unhelpful timeout instead.
+  if (problems.length > 0) throw new Error('the page did not load cleanly')
+
   // The nested hosts have to exist before anything can be nested inside them.
-  await page.getByRole('button', { name: 'Open drawer' }).click()
-  await page.getByRole('button', { name: 'Open modal' }).click()
+  await page.getByRole('button', { name: 'Open a drawer' }).click()
+  await page.getByRole('button', { name: 'Open a modal' }).click()
 
-  const modalField = page.getByRole('textbox').nth(2)
-  await modalField.fill('unsaved work')
+  await page.getByLabel('In the modal').fill('unsaved work')
 
-  // Two scopes up from the field, the root has to know it is dirty.
-  const badge = page.locator('header.bar .badge')
-  if (!(await badge.textContent()).includes('dirty')) {
+  // Two scopes up from the field, the masthead marker has to know it is dirty.
+  const marker = page.locator('.masthead .badge')
+  if (!(await marker.textContent()).includes('Unsaved')) {
     problems.push('the root scope did not see a guard two scopes below it')
   }
 
@@ -73,11 +89,16 @@ try {
     problems.push('navigating away from a dirty nested form did not prompt')
   }
   else {
-    await page.getByRole('button', { name: 'Stay' }).click()
+    await page.getByRole('button', { name: 'Keep editing' }).click()
     if (!page.url().endsWith('#/') && !page.url().endsWith(base)) {
       problems.push(`refusing the prompt did not stop the navigation (at ${page.url()})`)
     }
   }
+}
+catch (error) {
+  // Reported alongside the collected problems rather than as a raw stack, so
+  // the 404 that actually caused it is the first thing in the output.
+  problems.push(error.message.split('\n')[0])
 }
 finally {
   await browser.close()

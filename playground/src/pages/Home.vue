@@ -63,28 +63,16 @@ const modal = ref(false)
       </p>
     </section>
 
-    <div class="demos">
-      <section class="card">
-        <h2>One prompt, not three</h2>
-        <p>
-          Two guards in the same scope. Make both unsaved and leave: they are
-          asked in turn and stop at the first refusal, so the dialogs never
-          stack up on top of each other.
-        </p>
-        <DirtyForm label="Title" />
-        <DirtyForm label="Description" />
-      </section>
-
-      <section class="card">
-        <h2>Your dialog, not the browser's</h2>
-        <p>
-          <code>confirm</code> may return a promise, so the prompt is whatever
-          you already ship. Every dialog on this page is a real
-          <code>&lt;dialog&gt;</code> element.
-        </p>
-        <DirtyForm label="Notes" />
-      </section>
-    </div>
+    <section class="card card--wide">
+      <h2>One prompt, not three</h2>
+      <p>
+        Two guards in the same scope. Make both unsaved and leave: they are
+        asked in turn and stop at the first refusal, so the dialogs never stack
+        up on top of each other.
+      </p>
+      <DirtyForm label="Title" />
+      <DirtyForm label="Description" />
+    </section>
   </main>
 </template>
 
@@ -112,29 +100,5 @@ const modal = ref(false)
 
 .showcase__claim {
   margin: 0.5rem 0 0;
-}
-
-/**
- * The two demos share a grid of their own so they can share a height — one
- * carries two fields and the other one, and a row of cards that steps up and
- * down with its contents reads as broken rather than as varied.
- *
- * `grid-auto-rows: 1fr` is why they match; it cannot go on the outer grid,
- * where it would stretch the full-width showcase to the same height as well.
- */
-/* `auto-fit`, not `auto-fill`: with two cards in a grid three tracks wide,
-   `auto-fill` keeps the empty third and leaves a hole in the row. */
-.demos {
-  display: grid;
-  grid-column: 1 / -1;
-  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
-  grid-auto-rows: 1fr;
-  gap: 1.25rem;
-}
-
-/* Three lines reserved for every description, so the fields start at the same
-   height in both cards. */
-.demos .card p {
-  min-height: 4.5em;
 }
 </style>

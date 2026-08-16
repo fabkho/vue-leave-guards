@@ -20,7 +20,7 @@ npm i vue-leave-guards
 // main.ts
 import { createLeaveGuards } from 'vue-leave-guards/router'
 
-app.use(router).use(createLeaveGuards({ router }))
+app.use(router).use(createLeaveGuards({ router, confirm: () => myConfirmDialog() }))
 ```
 
 ```vue
@@ -30,15 +30,14 @@ import { useLeaveGuard } from 'vue-leave-guards'
 
 const draft = ref('')
 
-useLeaveGuard({
-  isDirty: () => draft.value !== '',
-  confirm: () => draft.value === '' || myConfirmDialog(),
-})
+useLeaveGuard({ isDirty: () => draft.value !== '' })
 </script>
 ```
 
-That is the whole contract. The component does not know whether it sits on a
-route, in a modal, or three overlays deep.
+That is the whole contract. The field says only whether it is dirty; the dialog
+belongs to whichever scope encloses it, so a form full of fields asks once. The
+component does not know whether it sits on a route, in a modal, or three
+overlays deep.
 
 ## Scopes nest
 
@@ -70,16 +69,43 @@ That last point is not a micro-optimisation: `window.onbeforeunload` is a
 singleton, so per-form listeners overwrite each other and null each other out on
 unmount.
 
-## Prompts never stack
+## One dialog, or one each
 
-Guards are asked **sequentially, bailing at the first refusal**, so two dirty
-forms produce one dialog rather than two. `confirm` may return a promise, so the
-dialog can be yours rather than the browser's.
+Where you put `confirm` decides how many prompts a leave produces.
+
+**On the scope** — the usual shape for a form. Each field reports dirtiness and
+nothing else; the host owns the one dialog, and leaving with six unsaved fields
+asks once:
+
+```ts
+// the host
+provideLeaveGuards({ confirm: () => askOnce() })
+
+// each field, anywhere below it
+useLeaveGuard({ isDirty: () => draft.value !== saved.value })
+```
+
+**On the guard** — for a form that genuinely needs its own wording. Guards that
+bring a `confirm` are asked individually, in turn, bailing at the first refusal
+so the dialogs never overlap:
+
+```ts
+useLeaveGuard({ isDirty, confirm: () => askAboutThisOne() })
+```
+
+The two mix: a scope's prompt covers everything below it that did not bring one,
+and is asked first. Two different `confirm` functions cannot be merged into a
+single dialog — to ask once, hand the question up rather than defining both.
+
+A scope opened purely for structure, holding only reporters, defers to whichever
+ancestor can actually ask.
 
 `isDirty` is separate, and synchronous, because `beforeunload` cannot await a
 dialog — browsers only accept a synchronous `preventDefault()`, and ignore any
 message you pass. It is also what `dirty` reads, so a header can show an unsaved
-marker for everything below it.
+marker for everything below it. A guard with `isDirty` and no `confirm` anywhere
+above it warns on tab close and permits in-app navigation, which is the right
+behaviour for a draft the server already holds.
 
 ## Narrowing a guard
 
@@ -114,8 +140,8 @@ with the unload listener already wired.
 | Export | Description |
 | --- | --- |
 | `useLeaveGuard(guard)` | Registers a guard with the nearest scope, for as long as the calling scope lives. A bare function guards every navigation and reports nothing to `beforeunload`. Returns `{ unregister, registered }`. |
-| `provideLeaveGuards()` | Opens a scope at this component and returns it. Registers with the enclosing scope, if any. |
-| `createReactiveLeaveGuardScope()` | A scope with no component attached, for a plugin or a store. |
+| `provideLeaveGuards(options?)` | Opens a scope at this component and returns it. Takes the `confirm` that speaks for everything below it. Registers with the enclosing scope, if any. |
+| `createReactiveLeaveGuardScope(options?)` | A scope with no component attached, for a plugin or a store. |
 | `createLeaveGuardScope(options?)` | The same, without Vue reactivity — no framework import at all. |
 | `leaveGuardsKey` | The injection key, for providing a registry by hand. |
 
@@ -123,8 +149,8 @@ with the unload listener already wired.
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `confirm` | `(ctx?) => boolean \| Promise<boolean>` | **Required.** `false` aborts the leave. |
-| `isDirty` | `() => boolean` | Synchronous. Feeds `beforeunload` and `dirty`. Absent means never dirty. |
+| `confirm` | `(ctx?) => boolean \| Promise<boolean>` | This guard's own prompt; `false` aborts the leave. Omit to defer to the scope's. |
+| `isDirty` | `() => boolean` | Synchronous. Feeds `beforeunload`, `dirty`, and whether the scope's prompt is asked. Absent means never dirty. |
 | `shouldGuard` | `(to, from) => boolean` | Absent means every navigation. |
 
 ### Scope
@@ -145,6 +171,7 @@ with the unload listener already wired.
 | Option | Default | Description |
 | --- | --- | --- |
 | `router` | — | Guards navigation. Omit to guard only `beforeunload`. |
+| `confirm` | — | The application's one prompt, for guards that bring none. |
 | `beforeUnload` | `true` | Warns before reload and tab close while anything is dirty. |
 | `window` | `globalThis.window` | For iframes, tests and SSR. |
 

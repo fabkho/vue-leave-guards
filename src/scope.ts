@@ -18,7 +18,12 @@ export type LeaveGuard<Route = unknown> = (
 ) => boolean | Promise<boolean>
 
 export interface LeaveGuardEntry<Route = unknown> {
-  confirm: LeaveGuard<Route>
+  /**
+   * This guard's own prompt. Omit it to let the scope's prompt speak for the
+   * guard instead — which is what collapses a form full of dirty fields into a
+   * single dialog rather than one per field.
+   */
+  confirm?: LeaveGuard<Route>
   /** Synchronous: `beforeunload` cannot await a dialog. */
   isDirty?: () => boolean
   /** Narrows the guard to the navigations it cares about. Absent means all. */
@@ -47,7 +52,18 @@ export interface LeaveGuardScope<Route = unknown> {
   composite: LeaveGuardEntry<Route>
 }
 
-export interface LeaveGuardScopeOptions {
+export interface LeaveGuardScopeOptions<Route = unknown> {
+  /**
+   * The scope's own prompt, asked **once** for everything below it that did not
+   * bring a prompt of its own.
+   *
+   * This is the shape most forms want: each field reports whether it is dirty,
+   * the host owns the one dialog, and leaving a form with six unsaved fields
+   * asks once. Guards that supply their own `confirm` are still asked
+   * individually, because two different dialog functions cannot be merged into
+   * one — only replaced by a prompt that stands for both.
+   */
+  confirm?: LeaveGuard<Route>
   /**
    * Called when the entry set gains or loses a guard, or when `notify()` is.
    *
@@ -67,18 +83,39 @@ export interface LeaveGuardScopeOptions {
  * @__NO_SIDE_EFFECTS__
  */
 export function createLeaveGuardScope<Route = unknown>(
-  options: LeaveGuardScopeOptions = {},
+  options: LeaveGuardScopeOptions<Route> = {},
 ): LeaveGuardScope<Route> {
-  const { onChange } = options
+  const { confirm: confirmScope, onChange } = options
   const entries = new Set<LeaveGuardEntry<Route>>()
 
+  // The copy survives a guard unregistering mid-await.
+  function applicable(context?: NavigationContext<Route>): LeaveGuardEntry<Route>[] {
+    return [...entries].filter(
+      entry => !(context && entry.shouldGuard && !entry.shouldGuard(context.to, context.from)),
+    )
+  }
+
+  /** Whether anything here can put a question to the user. */
+  function canPrompt(): boolean {
+    return confirmScope !== undefined || [...entries].some(entry => entry.confirm !== undefined)
+  }
+
   async function confirmLeave(context?: NavigationContext<Route>): Promise<boolean> {
+    const asking = applicable(context)
+
+    // One prompt for everything that did not bring its own, asked before them
+    // so the broad question comes first.
+    if (confirmScope && asking.some(entry => !entry.confirm && (entry.isDirty?.() ?? false))) {
+      if (!(await confirmScope(context))) return false
+    }
+
     // Sequential and bailing early: two guards prompting at once would stack
-    // dialogs. The copy survives a guard unregistering mid-await.
-    for (const entry of [...entries]) {
-      if (context && entry.shouldGuard && !entry.shouldGuard(context.to, context.from)) continue
+    // dialogs.
+    for (const entry of asking) {
+      if (!entry.confirm) continue
       if (!(await entry.confirm(context))) return false
     }
+
     return true
   }
 
@@ -102,7 +139,16 @@ export function createLeaveGuardScope<Route = unknown>(
       },
     },
     composite: {
-      confirm: confirmLeave,
+      /**
+       * A getter, because whether this scope can answer for itself depends on
+       * what is currently inside it. A scope opened purely for structure, whose
+       * guards only report dirtiness, must fold into an ancestor's single
+       * prompt — answering `true` on its own behalf would let its unsaved work
+       * through without anyone being asked.
+       */
+      get confirm() {
+        return canPrompt() ? confirmLeave : undefined
+      },
       isDirty,
       // A scope guards a navigation if anything inside it does. Entries without
       // a `shouldGuard` want every navigation, so they make the whole scope opt in.

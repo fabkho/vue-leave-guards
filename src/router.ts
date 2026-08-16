@@ -17,6 +17,12 @@ export interface LeaveGuardsOptions {
    */
   router?: Router
   /**
+   * The application's one prompt, asked once for every guard that did not bring
+   * a prompt of its own. Without it, such guards report to `beforeunload` and
+   * nothing else.
+   */
+  confirm?: RouteLeaveGuard
+  /**
    * Warns before a reload or tab close while any guard reports dirty state.
    *
    * @default true
@@ -53,11 +59,12 @@ export interface LeaveGuardsPlugin {
 export function createLeaveGuards(options: LeaveGuardsOptions = {}): LeaveGuardsPlugin {
   const {
     router,
+    confirm,
     beforeUnload = true,
     window: win = typeof window === 'undefined' ? undefined : window,
   } = options
 
-  const scope = createReactiveLeaveGuardScope<RouteLocationNormalized>()
+  const scope = createReactiveLeaveGuardScope<RouteLocationNormalized>({ confirm })
 
   return {
     scope,

@@ -71,6 +71,102 @@ describe('createLeaveGuardScope', () => {
   })
 })
 
+describe('one prompt for the whole scope', () => {
+  it('asks once for any number of dirty guards that brought no prompt', async () => {
+    const confirm = vi.fn(() => true)
+    const scope = createLeaveGuardScope({ confirm })
+
+    scope.registry.register({ isDirty: () => true })
+    scope.registry.register({ isDirty: () => true })
+    scope.registry.register({ isDirty: () => true })
+
+    await expect(scope.confirmLeave()).resolves.toBe(true)
+    expect(confirm).toHaveBeenCalledOnce()
+  })
+
+  it('refuses the leave when that one prompt is refused', async () => {
+    const scope = createLeaveGuardScope({ confirm: () => false })
+    scope.registry.register({ isDirty: () => true })
+
+    await expect(scope.confirmLeave()).resolves.toBe(false)
+  })
+
+  it('stays quiet when nothing is dirty', async () => {
+    const confirm = vi.fn(() => true)
+    const scope = createLeaveGuardScope({ confirm })
+
+    scope.registry.register({ isDirty: () => false })
+    scope.registry.register({ isDirty: () => true, confirm: () => true })
+
+    await expect(scope.confirmLeave()).resolves.toBe(true)
+    // The guard carrying its own prompt does not also trigger the scope's.
+    expect(confirm).not.toHaveBeenCalled()
+  })
+
+  it('still asks a guard that brought its own prompt, after the shared one', async () => {
+    const order: string[] = []
+    const scope = createLeaveGuardScope({
+      confirm: () => {
+        order.push('scope')
+        return true
+      },
+    })
+
+    scope.registry.register({ isDirty: () => true })
+    scope.registry.register({
+      isDirty: () => true,
+      confirm: () => {
+        order.push('own')
+        return true
+      },
+    })
+
+    await expect(scope.confirmLeave()).resolves.toBe(true)
+    expect(order).toEqual(['scope', 'own'])
+  })
+
+  it('lets a reporter through untouched when no prompt exists anywhere', async () => {
+    // Legitimate: `isDirty` alone feeds `beforeunload`, which needs no dialog.
+    const scope = createLeaveGuardScope()
+    scope.registry.register({ isDirty: () => true })
+
+    await expect(scope.confirmLeave()).resolves.toBe(true)
+    expect(scope.isDirty()).toBe(true)
+  })
+})
+
+describe('a structural scope with no prompt of its own', () => {
+  it('folds into an ancestor prompt instead of answering for itself', async () => {
+    const confirm = vi.fn(() => false)
+    const root = createLeaveGuardScope({ confirm })
+    const inner = createLeaveGuardScope()
+
+    root.registry.register(inner.composite)
+    inner.registry.register({ isDirty: () => true })
+
+    // The composite offers no `confirm`, so the root counts it among the guards
+    // its own prompt speaks for.
+    expect(inner.composite.confirm).toBeUndefined()
+    await expect(root.confirmLeave()).resolves.toBe(false)
+    expect(confirm).toHaveBeenCalledOnce()
+  })
+
+  it('answers for itself again as soon as it can prompt', async () => {
+    const rootConfirm = vi.fn(() => false)
+    const root = createLeaveGuardScope({ confirm: rootConfirm })
+    const inner = createLeaveGuardScope()
+
+    root.registry.register(inner.composite)
+    inner.registry.register({ isDirty: () => true, confirm: () => true })
+
+    // Negative control for the test above: same shape, one guard now carries a
+    // prompt, and the composite stops deferring.
+    expect(inner.composite.confirm).toBeTypeOf('function')
+    await expect(root.confirmLeave()).resolves.toBe(true)
+    expect(rootConfirm).not.toHaveBeenCalled()
+  })
+})
+
 describe('shouldGuard', () => {
   it('skips guards that opt out of this navigation', async () => {
     const scope = createLeaveGuardScope<Route>()

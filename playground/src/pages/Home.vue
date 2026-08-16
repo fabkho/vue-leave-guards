@@ -2,6 +2,7 @@
 import { inject, ref } from 'vue'
 import DirtyForm from '../DirtyForm.vue'
 import Overlay from '../Overlay.vue'
+import SharedPrompt from '../SharedPrompt.vue'
 import { rootScopeKey } from '../rootScope'
 
 const root = inject(rootScopeKey)
@@ -64,14 +65,18 @@ const modal = ref(false)
     </section>
 
     <section class="card card--wide">
-      <h2>One prompt, not three</h2>
+      <h2>One dialog for a whole form</h2>
       <p>
-        Two guards in the same scope. Make both unsaved and leave: they are
-        asked in turn and stop at the first refusal, so the dialogs never stack
-        up on top of each other.
+        These fields report whether they are dirty and leave the asking to the
+        form around them, which owns the single prompt. Make both unsaved and
+        navigate: one dialog, not one per field. Give a field its own
+        <code>confirm</code> instead — as the three above have — and it is asked
+        for separately.
       </p>
-      <DirtyForm label="Title" />
-      <DirtyForm label="Description" />
+      <SharedPrompt>
+        <DirtyForm label="Title" prompt="shared" />
+        <DirtyForm label="Description" prompt="shared" />
+      </SharedPrompt>
     </section>
   </main>
 </template>

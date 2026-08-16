@@ -3,12 +3,18 @@ import type { RouteLocationNormalized } from 'vue-router'
 import { ref, useTemplateRef } from 'vue'
 import { useLeaveGuard } from 'vue-leave-guards'
 
-const { label, only, unload = true } = defineProps<{
+const { label, only, unload = true, prompt = 'own' } = defineProps<{
   label: string
   /** Guard only navigations heading here. Absent means every navigation. */
   only?: string
   /** Whether this field's state reaches the tab-close warning. */
   unload?: boolean
+  /**
+   * `own` brings a dialog for this field alone. `shared` reports dirtiness and
+   * leaves the asking to the enclosing scope, so sibling fields produce one
+   * dialog between them rather than one each.
+   */
+  prompt?: 'own' | 'shared'
 }>()
 
 const value = ref('')
@@ -20,14 +26,16 @@ useLeaveGuard<RouteLocationNormalized>({
   isDirty: unload ? () => value.value !== '' : undefined,
   shouldGuard: only ? to => to.path === only : undefined,
   // Returning a promise is what lets the prompt be a real dialog rather than
-  // `window.confirm`, and what keeps two of them from opening at once.
-  confirm: () => {
-    if (value.value === '') return true
-    dialog.value?.showModal()
-    return new Promise<boolean>((resolve) => {
-      settle = resolve
-    })
-  },
+  // `window.confirm`. Omitting it entirely is what hands the question up.
+  confirm: prompt === 'shared'
+    ? undefined
+    : () => {
+        if (value.value === '') return true
+        dialog.value?.showModal()
+        return new Promise<boolean>((resolve) => {
+          settle = resolve
+        })
+      },
 })
 
 function answer(leave: boolean) {
@@ -45,7 +53,7 @@ function answer(leave: boolean) {
     <span v-if="value" class="badge is-dirty">unsaved</span>
   </label>
 
-  <dialog ref="dialog" @cancel.prevent="answer(false)">
+  <dialog v-if="prompt === 'own'" ref="dialog" @cancel.prevent="answer(false)">
     <p><strong>{{ label }}</strong> has unsaved changes.</p>
     <div class="row">
       <button type="button" class="plain" @click="answer(false)">

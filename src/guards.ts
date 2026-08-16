@@ -44,10 +44,11 @@ export interface ReactiveLeaveGuardScope<Route = unknown> extends LeaveGuardScop
  * @__NO_SIDE_EFFECTS__
  */
 export function createReactiveLeaveGuardScope<Route = unknown>(
-  options: LeaveGuardScopeOptions = {},
+  options: LeaveGuardScopeOptions<Route> = {},
 ): ReactiveLeaveGuardScope<Route> {
   const version = shallowRef(0)
   const scope = createLeaveGuardScope<Route>({
+    ...options,
     onChange: () => {
       version.value++
       options.onChange?.()
@@ -76,20 +77,31 @@ export function createReactiveLeaveGuardScope<Route = unknown>(
  * modal consults its own subtree while an outer scope still sees everything
  * inside it.
  *
+ * Pass a `confirm` to own the one dialog for everything inside — the usual
+ * shape for a form, where each field reports dirtiness and the host asks once.
+ *
  * @example
  * ```ts
- * const { confirmLeave } = provideLeaveGuards()
+ * const { confirmLeave } = provideLeaveGuards({ confirm: () => askOnce() })
  * if (!(await confirmLeave())) return
  * emit('close')
  * ```
  */
-export function provideLeaveGuards<Route = unknown>(): ReactiveLeaveGuardScope<Route> {
+export function provideLeaveGuards<Route = unknown>(
+  options: LeaveGuardScopeOptions<Route> = {},
+): ReactiveLeaveGuardScope<Route> {
   const parent = hasInjectionContext() ? inject(leaveGuardsKey, null) : null
 
   // An ancestor's `dirty` reads through this scope's composite, so it caches
   // whichever guards existed at the time. Without telling the parent, a form
   // mounted in here later would change a value nothing upstream is watching.
-  const scope = createReactiveLeaveGuardScope<Route>({ onChange: () => parent?.notify() })
+  const scope = createReactiveLeaveGuardScope<Route>({
+    ...options,
+    onChange: () => {
+      options.onChange?.()
+      parent?.notify()
+    },
+  })
 
   parent?.register(scope.composite)
   // The scope may be created outside an effect scope — in a plugin, or a test —

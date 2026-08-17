@@ -7,12 +7,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { provideLeaveGuards, useLeaveGuard } from '../../src/index.js'
 import { createLeaveGuards } from '../../src/router.js'
 
-// Every mounted app installs a `beforeunload` listener, and one left behind
-// answers for a later test's window. Which is the failure mode this package
-// exists to remove — it just has to be removed from the suite as well.
+// A mounted app's `beforeunload` listener answers for a later test's window if
+// left behind — the failure mode this package exists to remove, reproduced in
+// its own suite.
 enableAutoUnmount(afterEach)
 
-/** Registers a guard and nothing else; the leaf of every tree here. */
 function guardedLeaf(confirm: () => boolean | Promise<boolean>, isDirty = () => true) {
   return defineComponent({
     setup() {
@@ -227,10 +226,9 @@ describe('a guard with no scope', () => {
 
 describe('the router plugin', () => {
   /**
-   * Landed on `/` before anything mounts. `isReady()` alone would deadlock —
-   * with memory history the initial navigation is what `app.use(router)`
-   * triggers, so awaiting it first waits for something that has not started.
-   * Doing it here also keeps the initial navigation out of the guards' way.
+   * `isReady()` alone would deadlock: with memory history the initial
+   * navigation is what `app.use(router)` triggers, so awaiting it first waits
+   * on something that has not started.
    */
   async function makeRouter() {
     const router = createRouter({
@@ -270,8 +268,6 @@ describe('the router plugin', () => {
 
     const Leaf = defineComponent({
       setup() {
-        // The type parameter is how a core-only caller gets a typed route; the
-        // `/router` entry's aliases are the alternative.
         useLeaveGuard<RouteLocationNormalized>({
           confirm,
           shouldGuard: to => to.path === '/nowhere',
@@ -368,11 +364,10 @@ describe('the router plugin', () => {
     })
 
     /**
-     * Registered on the plugin's own scope rather than from a component. A
-     * guard mounted in the tree unregisters itself on unmount, which empties
-     * the scope and lets the navigation through no matter what — so the test
-     * would pass with the route guard still attached. This entry outlives the
-     * app, leaving the `beforeEach` removal as the only thing that can allow it.
+     * On the plugin's scope, not from a component: a mounted guard unregisters
+     * itself on unmount, which would let the navigation through even with the
+     * route guard still attached. This entry outlives the app, so only the
+     * `beforeEach` removal can allow it.
      */
     guards.scope.registry.register({ confirm: () => false })
 

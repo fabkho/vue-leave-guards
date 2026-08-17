@@ -136,8 +136,7 @@ describe('one prompt for the whole scope', () => {
     const context = nav('/away', '/here')
     await scope.confirmLeave(context)
 
-    // `shouldGuard` is well covered for this; `confirm` was not, so a guard
-    // reading `context.to` was relying on untested behaviour.
+    // A guard reading `context.to` was relying on untested behaviour.
     expect(scopePrompt).toHaveBeenCalledWith(context)
     expect(ownPrompt).toHaveBeenCalledWith(context)
   })
@@ -175,9 +174,9 @@ describe('a structural scope with no prompt of its own', () => {
     const inner = createLeaveGuardScope<Route>()
 
     root.registry.register(inner.composite)
-    // One field wants its own wording; the rest only report. A modal like this
-    // used to lose the reporters entirely — the composite looked claimed, and
-    // the scope inside had no prompt to claim them with.
+    // One field wants its own wording, the rest only report. Such a modal used
+    // to lose the reporters: the composite looked claimed, and the scope inside
+    // had no prompt to claim them with.
     inner.registry.register({ confirm: ownPrompt })
     inner.registry.register({ isDirty: () => true })
 

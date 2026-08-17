@@ -11,31 +11,20 @@ export type RouteLeaveGuardEntry = LeaveGuardEntry<RouteLocationNormalized>
 export type RouteLeaveGuardScope = ReactiveLeaveGuardScope<RouteLocationNormalized>
 
 export interface LeaveGuardsOptions {
-  /**
-   * Guards route navigation. Omit to guard only `beforeunload` — useful for an
-   * app with no router, or one that installs its own `beforeEach`.
-   */
+  /** Omit to guard only `beforeunload`. */
   router?: Router
   /**
-   * The application's one prompt, asked once for every guard that did not bring
-   * a prompt of its own. Without it, such guards report to `beforeunload` and
-   * nothing else.
+   * Asked once for every guard that brought no prompt of its own. Without it,
+   * such guards report to `beforeunload` and nothing else.
    */
   confirm?: RouteLeaveGuard
-  /**
-   * Warns before a reload or tab close while any guard reports dirty state.
-   *
-   * @default true
-   */
+  /** @default true */
   beforeUnload?: boolean
   /** A custom `window`, for iframes, tests and SSR. */
   window?: Window
 }
 
-/**
- * Structurally a Vue `ObjectPlugin`, spelled out rather than extending
- * `Plugin` — which is a union, and so not extendable.
- */
+/** Spelled out rather than extending `Plugin`, which is a union. */
 export interface LeaveGuardsPlugin {
   install: (app: App) => void
   /** The root scope, for asking outside a component — a logout button, say. */
@@ -43,13 +32,10 @@ export interface LeaveGuardsPlugin {
 }
 
 /**
- * The application-wide scope: one route guard and one `beforeunload` for the
- * whole app, however many dirty forms are mounted.
- *
- * A per-form listener cannot work — `window.onbeforeunload` is a singleton, so
- * a modal opening over a dirty page overwrites the page's handler and nulls it
- * again on unmount. Registering guards against one scope is what makes an
- * arbitrary tree of them collapse into a single listener.
+ * The application-wide scope: one route guard and one `beforeunload`, however
+ * many dirty forms are mounted. A listener per form cannot work —
+ * `window.onbeforeunload` is a singleton, so a modal opening over a dirty page
+ * overwrites the page's handler and nulls it again on unmount.
  *
  * @example
  * ```ts

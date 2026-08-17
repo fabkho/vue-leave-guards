@@ -1,12 +1,8 @@
 /**
- * Guards the emitted declarations against the one packaging bug this project
- * cannot see from the inside.
- *
- * Under `moduleResolution: node16`/`nodenext` a relative specifier must carry an
- * explicit extension. Get it wrong and a consumer on those settings resolves
- * nothing — but only if they also set `skipLibCheck: false`, which almost nobody
- * does. With it on, the errors disappear and every export silently becomes
- * `any`. Our own `vue-tsc` runs on the sources under `bundler` resolution, so it
+ * Under `moduleResolution: node16`/`nodenext` a relative specifier needs an
+ * explicit extension. Without one a consumer resolves nothing — and under the
+ * near-universal `skipLibCheck` the errors vanish and every export silently
+ * becomes `any`. `vue-tsc` reads the sources under `bundler` resolution, so it
  * stays green throughout.
  */
 import { existsSync, readdirSync, readFileSync } from 'node:fs'

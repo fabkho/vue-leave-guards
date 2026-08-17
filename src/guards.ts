@@ -3,20 +3,15 @@ import type { LeaveGuard, LeaveGuardEntry, LeaveGuardRegistry, LeaveGuardScope, 
 import { computed, getCurrentInstance, getCurrentScope, hasInjectionContext, inject, onScopeDispose, provide, shallowRef } from 'vue'
 import { createLeaveGuardScope } from './scope.js'
 
-/**
- * One key for a tree of scopes of possibly differing `Route` types, which no
- * single instantiation can express. Callers recover the type by passing it to
- * `useLeaveGuard<Route>()`; the looseness never surfaces in the public API.
- */
+/** `any` because one key spans scopes of differing `Route` types; callers
+ * recover it through `useLeaveGuard<Route>()`. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const leaveGuardsKey: InjectionKey<LeaveGuardRegistry<any>> = Symbol('vue-leave-guards')
 
 /**
  * Vue resolves `inject` against the *parent's* provides, so a component that
- * opens a scope and also registers a guard would reach past its own scope into
- * the enclosing one. Recording the registry against the owner closes that gap.
- *
- * Same idea as VueUse's `provideLocal`/`injectLocal`, narrowed to one key.
+ * opens a scope and also registers a guard would reach past its own scope.
+ * VueUse's `provideLocal`/`injectLocal`, narrowed to one key.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const localRegistries = new WeakMap<object, LeaveGuardRegistry<any>>()
@@ -27,19 +22,18 @@ function currentOwner(): object | null {
 
 export interface ReactiveLeaveGuardScope<Route = unknown> extends LeaveGuardScope<Route> {
   /**
-   * True while anything in this scope reports unsaved changes — bind a header
-   * dot to it. Tracks guards mounting and unmounting as well as the state each
-   * one reads, provided that state is reactive; `isDirty()` is the escape hatch
-   * for guards that read something Vue cannot see.
+   * True while anything below reports unsaved changes. Tracks mounting and
+   * unmounting as well as each guard's state, provided that state is reactive;
+   * `isDirty()` is the escape hatch for state Vue cannot see.
    */
   dirty: ComputedRef<boolean>
-  /** Live entry count. A nested scope counts as one, however deep it goes. */
+  /** Live entry count; a nested scope counts as one. */
   size: ComputedRef<number>
 }
 
 /**
- * A scope whose membership is observable. The registry itself stays a plain
- * `Set` in framework-free code; this adds the ref that changes alongside it.
+ * The registry stays a plain `Set` in framework-free code; this adds the ref
+ * that changes alongside it.
  *
  * @__NO_SIDE_EFFECTS__
  */
@@ -69,16 +63,10 @@ export function createReactiveLeaveGuardScope<Route = unknown>(
 }
 
 /**
- * Opens a leave-guard scope for a dismissable host, returning the question it
- * asks before closing. Guards register by injection, so a form with pending
- * edits is reached however deeply it is nested.
- *
- * Scopes nest: each registers with its parent as one composite guard, so a
- * modal consults its own subtree while an outer scope still sees everything
- * inside it.
- *
- * Pass a `confirm` to own the one dialog for everything inside — the usual
- * shape for a form, where each field reports dirtiness and the host asks once.
+ * Opens a scope for a dismissable host. Each scope registers with its parent as
+ * one composite guard, so a modal consults its own subtree while an outer scope
+ * still sees everything inside it. Pass a `confirm` to own the one dialog for
+ * everything below.
  *
  * @example
  * ```ts
@@ -92,9 +80,9 @@ export function provideLeaveGuards<Route = unknown>(
 ): ReactiveLeaveGuardScope<Route> {
   const parent = hasInjectionContext() ? inject(leaveGuardsKey, null) : null
 
-  // An ancestor's `dirty` reads through this scope's composite, so it caches
-  // whichever guards existed at the time. Without telling the parent, a form
-  // mounted in here later would change a value nothing upstream is watching.
+  // An ancestor's `dirty` caches whichever guards existed when it last read
+  // through this composite; without notifying it, a form mounted here later
+  // would change a value nothing upstream is watching.
   const scope = createReactiveLeaveGuardScope<Route>({
     ...options,
     onChange: () => {
@@ -104,8 +92,7 @@ export function provideLeaveGuards<Route = unknown>(
   })
 
   parent?.register(scope.composite)
-  // The scope may be created outside an effect scope — in a plugin, or a test —
-  // in which case there is nothing to dispose on and the caller unregisters.
+  // Outside an effect scope — a plugin, a test — there is nothing to dispose on.
   if (getCurrentScope()) onScopeDispose(() => parent?.unregister(scope.composite))
 
   const owner = currentOwner()
@@ -127,8 +114,8 @@ export interface UseLeaveGuardReturn {
  * lives. A bare function guards every navigation and reports nothing to
  * `beforeunload`.
  *
- * Warns rather than throwing when no scope is in the tree: a hard failure would
- * take down an app over a guard, but silence is how an unguarded form ships.
+ * Warns rather than throws: a hard failure would take down an app over a guard,
+ * but silence is how an unguarded form ships.
  */
 export function useLeaveGuard<Route = unknown>(
   guard: LeaveGuard<Route> | LeaveGuardEntry<Route>,

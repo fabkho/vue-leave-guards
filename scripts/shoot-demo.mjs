@@ -1,13 +1,11 @@
 /**
- * Shoots the readme stills from playground/demo.html, then composes the hero
- * candidates.
+ * Shoots the readme stills from playground/demo.html, then composes the hero.
  *
  *   pnpm dev                # in one shell
  *   pnpm demo:shoot         # in another
  *
- * Stills rather than a recording, deliberately. `page.screenshot()` honours
- * deviceScaleFactor — unlike CDP's screencast, whose frames are always CSS
- * pixels — so these come out at 2x and lossless.
+ * Stills, not a recording: `page.screenshot()` honours deviceScaleFactor, which
+ * CDP's screencast does not — its frames are always CSS pixels.
  */
 import { mkdirSync, readFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
@@ -16,7 +14,7 @@ import { chromium } from 'playwright'
 const URL = process.env.DEMO_URL ?? 'http://localhost:5173/demo.html'
 const OUT_DIR = join('docs', 'shots')
 
-/** 2x, so a shot is crisp on a retina display and can be shown at half size. */
+/** 2x, so a shot stays crisp shown at half size. */
 const DPR = 2
 const VIEWPORT = { width: 1600, height: 1000 }
 const PAD = 44
@@ -111,9 +109,8 @@ console.log(`stills: ${written.join(', ')}`)
 // ─── Heroes ───
 
 /**
- * Composed in HTML rather than with an image tool, so the presentation has real
- * shadows, a real gradient and real type. The stills are inlined as data URLs,
- * so this needs no server and no temporary files.
+ * Composed in HTML, not an image tool: real shadows, real gradient, real type.
+ * Stills go in as data URLs, so this needs no server and no temp files.
  */
 const inline = name =>
   `data:image/png;base64,${readFileSync(join(OUT_DIR, `${name}.png`)).toString('base64')}`

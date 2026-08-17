@@ -2,11 +2,6 @@
 import { inject } from 'vue'
 import { rootScopeKey } from './rootScope'
 
-/**
- * The live page. Every case is something a consumer would actually build — an
- * unsaved marker in the masthead, a form that asks before it closes — rather
- * than a tour of the registry.
- */
 const root = inject(rootScopeKey)
 </script>
 

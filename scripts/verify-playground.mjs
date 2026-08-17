@@ -1,11 +1,7 @@
 /**
- * Drives the *built* playground and checks that a guard actually fires.
- *
- * "Build green, page 200, console clean" is not evidence here. A leave guard
- * that reaches no scope no-ops silently — the page still renders, every button
- * still works, and the only symptom is that unsaved work disappears. So the
- * check has to be behavioural: make a field dirty, navigate, and assert the
- * navigation did not happen.
+ * Drives the *built* playground. A guard that reaches no scope no-ops silently:
+ * the page renders, the buttons work, and the only symptom is that unsaved work
+ * disappears — so the check has to be behavioural rather than "page 200".
  */
 import { createServer } from 'node:http'
 import { readFile } from 'node:fs/promises'
@@ -22,8 +18,8 @@ const TYPES = {
   '.json': 'application/json',
 }
 
-/* A Pages build is rooted at /<repo>/, so its asset URLs carry that prefix and
-   serving dist at `/` would 404 every one of them. Mirror the deployed shape. */
+/* A Pages build roots its asset URLs at /<repo>/, so serving dist at `/`
+   would 404 every one of them. */
 const base = process.env.PAGES_BASE ?? '/'
 
 const server = createServer(async (request, response) => {

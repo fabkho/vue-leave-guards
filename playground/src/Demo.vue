@@ -73,7 +73,7 @@ useLeaveGuard({ isDirty: () => notes.value !== saved.notes })
       </footer>
     </section>
 
-    <!-- Subject 2: the same idea three hosts deep, which is the mechanic. -->
+    <!-- Subject 2: static, a still life of what three nested hosts look like. -->
     <section class="panel tower">
       <header class="panel__head">
         <h1>Subscription</h1>

@@ -10,6 +10,8 @@ that depth.
 
 **[Try it →](https://fabkho.github.io/vue-leave-guards/)**
 
+![Three nested hosts, each holding unsaved work, and the single dialog they produce between them](./docs/hero.png)
+
 ## Install
 
 ```bash

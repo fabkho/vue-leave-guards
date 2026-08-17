@@ -174,70 +174,18 @@ const CHROME = `
 const SIZE = { width: 1600, height: 900 }
 
 /**
- * Five candidates on one ground and one plate, differing in which subjects they
- * lead with and how they are arranged. Every subject in a given hero is drawn at
- * a single scale.
+ * The hero: depth on the left, the one question it produces on the right —
+ * which is the whole proposition in a picture. Both subjects are drawn at a
+ * single scale, or the same card would appear at two sizes in one image.
  */
-const HEROES = [
-  {
-    // 1 — the pair, closest in shape to the colour picker's hero.
-    name: 'hero-1-form-and-dialog',
-    scale: 0.46,
-    body: s => `<div class="stage">
-      <img src="${inline('01-form')}" ${at('01-form', s)}>
-      <img src="${inline('03-dialog')}" ${at('03-dialog', s)}>
-    </div>`,
-  },
-  {
-    // 2 — the mechanic: depth on the left, the one question it produces.
-    name: 'hero-2-tower-and-dialog',
-    scale: 0.46,
-    body: s => `<div class="stage">
-      <img src="${inline('02-tower')}" ${at('02-tower', s)}>
-      <img src="${inline('03-dialog')}" ${at('03-dialog', s)}>
-    </div>`,
-  },
-  {
-    // 3 — the dialog overlapping the form it belongs to, rather than beside it.
-    name: 'hero-3-overlap',
-    scale: 0.52,
-    css: `
-      .stage { display: block; position: relative; }
-      /* Low and to the right, so it reads as arriving over the form without
-         burying the buttons it is asking about. */
-      .stage img.over {
-        position: absolute; right: -118px; bottom: -112px;
-        filter:
-          drop-shadow(0 3px 6px rgb(0 0 0 / 10%))
-          drop-shadow(0 22px 44px rgb(0 0 0 / 18%))
-          drop-shadow(0 60px 100px rgb(0 0 0 / 14%));
-      }`,
-    body: s => `<div class="stage">
-      <img src="${inline('01-form')}" ${at('01-form', s)}>
-      <img class="over" src="${inline('03-dialog')}" ${at('03-dialog', s)}>
-    </div>`,
-  },
-  {
-    // 4 — all three, the whole story in one row.
-    name: 'hero-4-three-up',
-    scale: 0.38,
-    css: `.stage { gap: 52px; }`,
-    body: s => `<div class="stage">
-      <img src="${inline('01-form')}" ${at('01-form', s)}>
-      <img src="${inline('02-tower')}" ${at('02-tower', s)}>
-      <img src="${inline('03-dialog')}" ${at('03-dialog', s)}>
-    </div>`,
-  },
-  {
-    // 5 — the tower alone and large, no plate: the single idea, uncrowded.
-    name: 'hero-5-tower-solo',
-    scale: 0.92,
-    css: `.plate { background: none; backdrop-filter: none; box-shadow: none; padding: 0; }`,
-    body: s => `<div class="stage">
-      <img src="${inline('02-tower')}" ${at('02-tower', s)}>
-    </div>`,
-  },
-]
+const HEROES = [{
+  name: 'hero',
+  scale: 0.46,
+  body: s => `<div class="stage">
+    <img src="${inline('02-tower')}" ${at('02-tower', s)}>
+    <img src="${inline('03-dialog')}" ${at('03-dialog', s)}>
+  </div>`,
+}]
 
 for (const hero of HEROES) {
   const heroContext = await browser.newContext({

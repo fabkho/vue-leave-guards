@@ -41,17 +41,31 @@ belongs to whichever scope encloses it, so a form full of fields asks once. The
 component does not know whether it sits on a route, in a modal, or three
 overlays deep.
 
+## What vue-router already does
+
+`onBeforeRouteLeave` reaches any component below a `<RouterView>`, however
+deeply nested — so if all you need is "ask before this route changes", use it
+and stop here.
+
+What it does not do:
+
+| | |
+| --- | --- |
+| **One dialog for a form** | Every guard prompts on its own. Six dirty fields ask six times, and there is no way to collapse them. |
+| **Anything that is not a navigation** | A modal closing itself is not a route change. `confirmLeave()` is. |
+| **Reload and tab close** | `beforeunload` is untouched. |
+| **A shared dirty flag** | Nothing to bind a header marker to. |
+| **Hosts outside the RouterView** | A modal mounted by a global overlay host, or teleported out, never registers a guard at all. |
+
 ## Scopes nest
 
-`onBeforeRouteLeave` only fires for components a route names, so a dirty form
-inside a modal inside a drawer is invisible to it. Here, any host that can
-dismiss itself opens a scope:
+Any host that can dismiss itself opens a scope, and asks it before closing:
 
 ```vue
 <script setup lang="ts">
 import { provideLeaveGuards } from 'vue-leave-guards'
 
-const { confirmLeave, dirty } = provideLeaveGuards()
+const { confirmLeave } = provideLeaveGuards()
 
 async function close() {
   if (!(await confirmLeave())) return

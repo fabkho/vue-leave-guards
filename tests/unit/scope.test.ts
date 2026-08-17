@@ -168,6 +168,59 @@ describe('a structural scope with no prompt of its own', () => {
     expect(confirm).toHaveBeenCalledOnce()
   })
 
+  it('folds its unclaimed guards upward even when one of them can prompt', async () => {
+    const rootPrompt = vi.fn(() => true)
+    const ownPrompt = vi.fn(() => true)
+    const root = createLeaveGuardScope<Route>({ confirm: rootPrompt })
+    const inner = createLeaveGuardScope<Route>()
+
+    root.registry.register(inner.composite)
+    // One field wants its own wording; the rest only report. A modal like this
+    // used to lose the reporters entirely — the composite looked claimed, and
+    // the scope inside had no prompt to claim them with.
+    inner.registry.register({ confirm: ownPrompt })
+    inner.registry.register({ isDirty: () => true })
+
+    await expect(root.confirmLeave()).resolves.toBe(true)
+    expect(rootPrompt).toHaveBeenCalledOnce()
+    expect(ownPrompt).toHaveBeenCalledOnce()
+  })
+
+  it('reaches unclaimed work two structural scopes down', async () => {
+    const rootPrompt = vi.fn(() => false)
+    const root = createLeaveGuardScope<Route>({ confirm: rootPrompt })
+    const mid = createLeaveGuardScope<Route>()
+    const deep = createLeaveGuardScope<Route>()
+
+    root.registry.register(mid.composite)
+    mid.registry.register(deep.composite)
+    mid.registry.register({ confirm: () => true })
+    deep.registry.register({ isDirty: () => true })
+
+    await expect(root.confirmLeave()).resolves.toBe(false)
+    expect(rootPrompt).toHaveBeenCalledOnce()
+  })
+
+  it('does not ask about nested work that opted out of this navigation', async () => {
+    const rootPrompt = vi.fn(() => true)
+    const root = createLeaveGuardScope<Route>({ confirm: rootPrompt })
+    const inner = createLeaveGuardScope<Route>()
+    root.registry.register(inner.composite)
+
+    inner.registry.register({ isDirty: () => true, shouldGuard: () => false })
+    inner.registry.register({ isDirty: () => false })
+
+    // Flat in the root these two would not trigger the prompt; nesting must
+    // not change the answer.
+    await expect(root.confirmLeave(nav('/away'))).resolves.toBe(true)
+    expect(rootPrompt).not.toHaveBeenCalled()
+
+    // Negative control: the same guard, for the navigation it does care about.
+    inner.registry.register({ isDirty: () => true, shouldGuard: to => to.path === '/away' })
+    await expect(root.confirmLeave(nav('/away'))).resolves.toBe(true)
+    expect(rootPrompt).toHaveBeenCalledOnce()
+  })
+
   it('answers for itself again as soon as it can prompt', async () => {
     const rootConfirm = vi.fn(() => false)
     const root = createLeaveGuardScope({ confirm: rootConfirm })

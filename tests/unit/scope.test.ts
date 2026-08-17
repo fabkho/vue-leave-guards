@@ -125,6 +125,23 @@ describe('one prompt for the whole scope', () => {
     expect(order).toEqual(['scope', 'own'])
   })
 
+  it('hands the navigation to both kinds of prompt', async () => {
+    const scopePrompt = vi.fn(() => true)
+    const ownPrompt = vi.fn(() => true)
+    const scope = createLeaveGuardScope<Route>({ confirm: scopePrompt })
+
+    scope.registry.register({ isDirty: () => true })
+    scope.registry.register({ confirm: ownPrompt })
+
+    const context = nav('/away', '/here')
+    await scope.confirmLeave(context)
+
+    // `shouldGuard` is well covered for this; `confirm` was not, so a guard
+    // reading `context.to` was relying on untested behaviour.
+    expect(scopePrompt).toHaveBeenCalledWith(context)
+    expect(ownPrompt).toHaveBeenCalledWith(context)
+  })
+
   it('lets a reporter through untouched when no prompt exists anywhere', async () => {
     // Legitimate: `isDirty` alone feeds `beforeunload`, which needs no dialog.
     const scope = createLeaveGuardScope()

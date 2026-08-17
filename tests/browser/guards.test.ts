@@ -105,6 +105,38 @@ describe('scopes through a real component tree', () => {
     expect(root.dirty.value).toBe(true)
   })
 
+  it('unregisters a whole nested scope when its host unmounts', async () => {
+    const Leaf = guardedLeaf(() => false)
+    const Modal = defineComponent({
+      setup() {
+        provideLeaveGuards()
+        return () => h(Leaf)
+      },
+    })
+
+    let root!: LeaveGuardScope
+    const wrapper = mount(defineComponent({
+      setup() {
+        root = provideLeaveGuards()
+        const open = ref(true)
+        return { open }
+      },
+      render() {
+        return this.open ? h(Modal) : h('div', 'closed')
+      },
+    }))
+
+    expect(root.registry.size).toBe(1)
+
+    // Without the composite's own disposal the root keeps it for the life of
+    // the app: every later navigation would prompt about a form long gone.
+    await wrapper.setData({ open: false })
+
+    expect(root.registry.size).toBe(0)
+    expect(root.isDirty()).toBe(false)
+    await expect(root.confirmLeave()).resolves.toBe(true)
+  })
+
   it('unregisters a guard when its component unmounts', async () => {
     const Leaf = guardedLeaf(() => false)
 
@@ -253,6 +285,104 @@ describe('the router plugin', () => {
     await router.push('/away')
     expect(router.currentRoute.value.path).toBe('/away')
     expect(confirm).not.toHaveBeenCalled()
+  })
+
+  it('asks the app-wide prompt once for guards that brought none', async () => {
+    const router = await makeRouter()
+    const confirm = vi.fn(() => false)
+
+    const Reporter = defineComponent({
+      setup() {
+        useLeaveGuard({ isDirty: () => true })
+        return () => h('div')
+      },
+    })
+
+    mount(defineComponent({ setup: () => () => [h(Reporter), h(Reporter)] }), {
+      global: { plugins: [router, createLeaveGuards({ router, confirm })] },
+    })
+
+    await router.push('/away')
+
+    // Two dirty reporters, one dialog — the shape the readme leads with.
+    expect(confirm).toHaveBeenCalledOnce()
+    expect(router.currentRoute.value.path).toBe('/')
+
+    confirm.mockReturnValue(true)
+    await router.push('/away')
+    expect(router.currentRoute.value.path).toBe('/away')
+    expect(confirm).toHaveBeenCalledTimes(2)
+  })
+
+  it('hands the navigation to the prompt that is asked', async () => {
+    const router = await makeRouter()
+    const seen: Array<string | undefined> = []
+
+    const Leaf = defineComponent({
+      setup() {
+        useLeaveGuard({ isDirty: () => true })
+        return () => h('div')
+      },
+    })
+
+    mount(Leaf, {
+      global: {
+        plugins: [router, createLeaveGuards({
+          router,
+          confirm: (context) => {
+            seen.push(context?.to.path, context?.from.path)
+            return true
+          },
+        })],
+      },
+    })
+
+    await router.push('/away')
+    expect(seen).toEqual(['/away', '/'])
+  })
+
+  it('accepts a bare function as a guard', async () => {
+    const router = await makeRouter()
+    const confirm = vi.fn(() => false)
+
+    const Leaf = defineComponent({
+      setup() {
+        useLeaveGuard(confirm)
+        return () => h('div')
+      },
+    })
+
+    mount(Leaf, { global: { plugins: [router, createLeaveGuards({ router })] } })
+
+    await router.push('/away')
+    expect(confirm).toHaveBeenCalledOnce()
+    expect(router.currentRoute.value.path).toBe('/')
+  })
+
+  it('stops guarding navigation once the app unmounts', async () => {
+    const router = await makeRouter()
+    const guards = createLeaveGuards({ router })
+
+    const wrapper = mount(defineComponent({ setup: () => () => h('div') }), {
+      global: { plugins: [router, guards] },
+    })
+
+    /**
+     * Registered on the plugin's own scope rather than from a component. A
+     * guard mounted in the tree unregisters itself on unmount, which empties
+     * the scope and lets the navigation through no matter what — so the test
+     * would pass with the route guard still attached. This entry outlives the
+     * app, leaving the `beforeEach` removal as the only thing that can allow it.
+     */
+    guards.scope.registry.register({ confirm: () => false })
+
+    await router.push('/away')
+    expect(router.currentRoute.value.path).toBe('/')
+
+    // The route guard is the app's too, not the router's forever.
+    wrapper.unmount()
+    await router.push('/away')
+    expect(router.currentRoute.value.path).toBe('/away')
   })
 
   it('warns on unload only while something is dirty, and stops on unmount', () => {

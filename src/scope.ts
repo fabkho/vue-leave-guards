@@ -75,6 +75,20 @@ export interface LeaveGuardScopeOptions<Route = unknown> {
 }
 
 /**
+ * Composite entries, mapped to "do you hold dirty work nobody below you will
+ * ask about?".
+ *
+ * A `WeakMap` rather than a field on `LeaveGuardEntry`, so the published entry
+ * shape is unchanged and a consumer's hand-built entry cannot collide with it.
+ */
+const unclaimed = new WeakMap<
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  LeaveGuardEntry<any>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (context?: NavigationContext<any>) => boolean
+>()
+
+/**
  * Creates a scope with no ties to a component tree.
  *
  * Call this directly for the application-wide scope a plugin owns; inside a
@@ -100,12 +114,31 @@ export function createLeaveGuardScope<Route = unknown>(
     return confirmScope !== undefined || [...entries].some(entry => entry.confirm !== undefined)
   }
 
+  /**
+   * Dirty work below here that nothing below here will ask about, and which an
+   * ancestor's prompt therefore has to cover.
+   *
+   * Whether an entry is claimed cannot be read off `entry.confirm`: a nested
+   * scope exposes one as soon as *any* single guard inside it brings a prompt,
+   * which would leave that scope's reporter-only guards unasked by anyone.
+   * Composites answer for themselves through `unclaimed` instead, recursing so
+   * the check re-applies `shouldGuard` at every level.
+   */
+  function hasUnclaimedDirty(context?: NavigationContext<Route>): boolean {
+    return applicable(context).some((entry) => {
+      const nested = unclaimed.get(entry)
+      return nested
+        ? nested(context)
+        : !entry.confirm && (entry.isDirty?.() ?? false)
+    })
+  }
+
   async function confirmLeave(context?: NavigationContext<Route>): Promise<boolean> {
     const asking = applicable(context)
 
     // One prompt for everything that did not bring its own, asked before them
     // so the broad question comes first.
-    if (confirmScope && asking.some(entry => !entry.confirm && (entry.isDirty?.() ?? false))) {
+    if (confirmScope && hasUnclaimedDirty(context)) {
       if (!(await confirmScope(context))) return false
     }
 
@@ -121,7 +154,7 @@ export function createLeaveGuardScope<Route = unknown>(
 
   const isDirty = () => [...entries].some(entry => entry.isDirty?.() ?? false)
 
-  return {
+  const scope: LeaveGuardScope<Route> = {
     confirmLeave,
     isDirty,
     registry: {
@@ -156,4 +189,10 @@ export function createLeaveGuardScope<Route = unknown>(
         [...entries].some(entry => entry.shouldGuard?.(to, from) ?? true),
     },
   }
+
+  // A scope with a prompt of its own claims everything below it; one without
+  // passes the question upwards.
+  unclaimed.set(scope.composite, context => !confirmScope && hasUnclaimedDirty(context))
+
+  return scope
 }

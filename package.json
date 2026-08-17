@@ -52,6 +52,7 @@
     "check:dts": "node scripts/check-dts.mjs",
     "dev": "pnpm -C playground dev",
     "build:playground": "pnpm --filter playground build && node scripts/verify-playground.mjs",
+    "demo:shoot": "node scripts/shoot-demo.mjs",
     "test": "vitest run --project unit",
     "test:browser": "vitest run --project browser",
     "test:all": "vitest run",

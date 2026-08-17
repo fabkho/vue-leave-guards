@@ -16,4 +16,14 @@ export default defineConfig({
       'vue-leave-guards': fileURLToPath(new URL('../src/index.ts', import.meta.url)),
     },
   },
+  build: {
+    rollupOptions: {
+      /* Vite discovers index.html on its own; demo.html is the staging page the
+         readme stills are shot from and has to be named to be built. */
+      input: {
+        index: fileURLToPath(new URL('./index.html', import.meta.url)),
+        demo: fileURLToPath(new URL('./demo.html', import.meta.url)),
+      },
+    },
+  },
 })

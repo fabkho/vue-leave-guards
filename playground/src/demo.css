@@ -1,0 +1,29 @@
+/**
+ * The staging page. `?bare` drops the stage background so shots come out
+ * transparent, carrying only the subject and its own shadow.
+ */
+:root {
+  color-scheme: light;
+  font-family: -apple-system, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
+  line-height: 1.4;
+  color: #1d1d1f;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+body {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 3rem;
+  background: #eef2f4;
+}
+
+body.bare {
+  background: transparent;
+}

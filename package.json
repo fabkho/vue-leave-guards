@@ -1,7 +1,7 @@
 {
   "name": "vue-leave-guards",
   "type": "module",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "packageManager": "pnpm@11.21.0",
   "description": "Nested unsaved-changes guards for Vue 3: scopes that nest, so a dirty form inside a modal inside a drawer collapses into one route guard and one beforeunload.",
   "author": "Fabian Kirchhoff",

@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.1](https://github.com/fabkho/vue-leave-guards/compare/1.0.0...1.0.1) (2026-08-18)
+
+
+### Bug Fixes
+
+* ask about dirty work a partly-claimed scope was dropping ([a1a384d](https://github.com/fabkho/vue-leave-guards/commit/a1a384d38e019b507c6eb9ecaac4dfdd313edd0f)), closes [#2](https://github.com/fabkho/vue-leave-guards/issues/2)
+* land the stranded half of the 1.0.1 stack ([fbdd2a1](https://github.com/fabkho/vue-leave-guards/commit/fbdd2a15426e156688c2647c5d47662b13ea9ae4))
+
 ## 1.0.0 (2026-08-17)
 
 

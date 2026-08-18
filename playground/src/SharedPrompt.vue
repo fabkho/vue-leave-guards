@@ -3,9 +3,8 @@ import { useTemplateRef } from 'vue'
 import { provideLeaveGuards } from 'vue-leave-guards'
 
 /**
- * A host that owns the one dialog for everything inside it. The fields below
- * report whether they are dirty and nothing else, so leaving with six of them
- * unsaved asks once rather than six times.
+ * A host that owns the one dialog for everything inside it. What it contains
+ * reports dirtiness and nothing else, so none of it needs to know how to ask.
  */
 const dialog = useTemplateRef<HTMLDialogElement>('dialog')
 
@@ -30,7 +29,7 @@ function answer(leave: boolean) {
 <template>
   <div class="shared">
     <span class="badge" :class="{ 'is-dirty': dirty }">
-      {{ size }} field{{ size === 1 ? '' : 's' }} reporting, one dialog
+      {{ size }} reporting, one dialog
     </span>
     <slot />
   </div>

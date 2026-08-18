@@ -36,10 +36,9 @@ useLeaveGuard({ isDirty: () => draft.value !== '' })
 </script>
 ```
 
-That is the whole contract. The field says only whether it is dirty; the dialog
-belongs to whichever scope encloses it, so a form full of fields asks once. The
-component does not know whether it sits on a route, in a modal, or three
-overlays deep.
+That is the whole contract. The form reports a fact; the dialog belongs to the
+application. The component does not know whether it sits on a route, in a modal,
+or three overlays deep.
 
 ## What vue-router already does
 
@@ -85,33 +84,31 @@ That last point is not a micro-optimisation: `window.onbeforeunload` is a
 singleton, so per-form listeners overwrite each other and null each other out on
 unmount.
 
-## One dialog, or one each
+## Who owns the dialog
 
-Where you put `confirm` decides how many prompts a leave produces.
-
-**On the scope** — the usual shape for a form. Each field reports dirtiness and
-nothing else; the host owns the one dialog, and leaving with six unsaved fields
-asks once:
+Set `confirm` once, on the plugin, and no form ever touches your dialog code:
 
 ```ts
-// the host
-provideLeaveGuards({ confirm: () => askOnce() })
+// main.ts — the app's leave dialog, written once
+app.use(createLeaveGuards({ router, confirm: () => myConfirmDialog() }))
 
-// each field, anywhere below it
-useLeaveGuard({ isDirty: () => draft.value !== saved.value })
+// any form, anywhere below it
+useLeaveGuard({ isDirty: () => form.isDirty })
 ```
 
-**On the guard** — for a form that genuinely needs its own wording. Guards that
-bring a `confirm` are asked individually, in turn, bailing at the first refusal
-so the dialogs never overlap:
+One guard per form, reporting a fact. Every form asks the same way, and none of
+them import a modal to do it.
+
+Put `confirm` on the guard when a particular form needs its own wording:
 
 ```ts
 useLeaveGuard({ isDirty, confirm: () => askAboutThisOne() })
 ```
 
-The two mix: a scope's prompt covers everything below it that did not bring one,
-and is asked first. Two different `confirm` functions cannot be merged into a
-single dialog — to ask once, hand the question up rather than defining both.
+Guards carrying their own are asked individually, in turn, bailing at the first
+refusal so the dialogs never overlap. Where one scope holds several — two
+separately-saveable sections, or a form beside an unsaved filter — the scope's
+prompt covers all those that brought none, and is asked once before them.
 
 A scope opened purely for structure, holding only reporters, defers to whichever
 ancestor can actually ask.

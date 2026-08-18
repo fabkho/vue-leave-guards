@@ -91,13 +91,14 @@ try {
     }
   }
 
-  /* Two dirty fields that report but do not prompt must produce one dialog
+  /* Two unrelated dirty things that report but do not prompt must produce one
+     dialog
      between them. Counting open dialogs cannot show that — per-guard prompts
      are sequential, so exactly one is open at any instant either way. What
      separates them is how many dismissals the leave costs. */
   await page.getByLabel('In the modal').fill('')
-  await page.getByLabel('Title').fill('a')
-  await page.getByLabel('Description').fill('b')
+  await page.getByLabel('Draft note').fill('a')
+  await page.getByLabel('Column filter').fill('b')
   await page.getByRole('link', { name: 'Another page' }).click()
   await page.getByRole('button', { name: 'Discard' }).click()
 

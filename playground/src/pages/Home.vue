@@ -65,17 +65,18 @@ const modal = ref(false)
     </section>
 
     <section class="card card--wide">
-      <h2>One dialog for a whole form</h2>
+      <h2>The host owns the dialog</h2>
       <p>
-        These fields report whether they are dirty and leave the asking to the
-        form around them, which owns the single prompt. Make both unsaved and
-        navigate: one dialog, not one per field. Give a field its own
-        <code>confirm</code> instead — as the three above have — and it is asked
-        for separately.
+        Two unrelated things unsaved at once — a draft and a filter. Neither
+        knows how to ask; each only reports that it is dirty, and the host
+        around them owns the single prompt. That is the usual shape: one guard
+        per form, and the dialog written once for the whole app. Give a guard
+        its own <code>confirm</code> instead — as the three above have — and it
+        is asked for separately.
       </p>
       <SharedPrompt>
-        <DirtyForm label="Title" prompt="shared" />
-        <DirtyForm label="Description" prompt="shared" />
+        <DirtyForm label="Draft note" prompt="shared" />
+        <DirtyForm label="Column filter" prompt="shared" />
       </SharedPrompt>
     </section>
   </main>
